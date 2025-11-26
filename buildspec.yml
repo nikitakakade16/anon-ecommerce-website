@@ -3,46 +3,24 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      - echo "Checking directory structure..."
+      - ls -la  # Debug: see what files exist
       - echo "Installing dependencies..."
-      - cd client && npm install
-      - cd ../server && npm install
-      - cd ..
-      - echo "Dependencies installed successfully"
+      - npm install  # Try root package.json first
+      - if [ -d "client" ]; then cd client && npm install && cd ..; fi
+      - if [ -d "server" ]; then cd server && npm install && cd ..; fi
 
   build:
     commands:
-      - echo "Building the application..."
-      - echo "Building React client..."
-      - cd client && npm run build
-      - cd ..
-      - echo "Client build completed"
-      
-      - echo "Setting up environment variables..."
-      - cd server
-      - if [ -f .env.example ]; then cp .env.example .env; fi
-      - cd ..
-      
-      - echo "Build completed successfully"
+      - echo "Building application..."
+      - if [ -d "client" ]; then cd client && npm run build && cd ..; fi
+      - echo "Build completed"
 
   post_build:
     commands:
-      - echo "Preparing artifacts for deployment..."
-      - echo "Creating deployment package..."
-      - mkdir -p deployment-package
-      # Copy built React app
-      - cp -r client/build/* deployment-package/
-      # Copy server files
-      - cp -r server/* deployment-package/
-      - cp -r package.json deployment-package/
-      # Ensure proper file structure
-      - ls -la deployment-package/
+      - echo "Build completed on `date`"
+      - ls -la  # Verify final structure
 
 artifacts:
   files:
     - '**/*'
-  base-directory: deployment-package
-
-cache:
-  paths:
-    - 'client/node_modules/**/*'
-    - 'server/node_modules/**/*'
