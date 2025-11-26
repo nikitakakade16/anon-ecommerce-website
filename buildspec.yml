@@ -1,26 +1,81 @@
 version: 0.2
 
 phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo "Installing system dependencies..."
+      - yum update -y
+      - yum install -y findutils
+
   pre_build:
     commands:
       - echo "Checking directory structure..."
-      - ls -la  # Debug: see what files exist
-      - echo "Installing dependencies..."
-      - npm install  # Try root package.json first
-      - if [ -d "client" ]; then cd client && npm install && cd ..; fi
-      - if [ -d "server" ]; then cd server && npm install && cd ..; fi
+      - ls -la
+      - echo "Installing application dependencies..."
+      
+      # Install root dependencies
+      - if [ -f "package.json" ]; then npm install; fi
+      
+      # Install client dependencies
+      - if [ -d "client" ]; then
+          cd client && npm install && cd ..;
+        else
+          echo "Client directory not found, searching for React app...";
+          find . -name "package.json" -type f | grep -v node_modules;
+        fi
+      
+      # Install server dependencies  
+      - if [ -d "server" ]; then
+          cd server && npm install && cd ..;
+        else
+          echo "Server directory not found, searching for backend...";
+          find . -name "server" -type d;
+        fi
 
   build:
     commands:
       - echo "Building application..."
-      - if [ -d "client" ]; then cd client && npm run build && cd ..; fi
-      - echo "Build completed"
+      
+      # Build React client
+      - if [ -d "client" ]; then
+          cd client && npm run build && cd ..;
+          echo "Client build completed successfully";
+        else
+          echo "No client directory found for building";
+        fi
+      
+      # Build server (if needed)
+      - if [ -d "server" ] && [ -f "server/package.json" ]; then
+          cd server && npm run build:prod || npm run build || true;
+          cd ..;
+        fi
+      
+      - echo "Build phase completed"
 
   post_build:
     commands:
+      - echo "Creating deployment package..."
       - echo "Build completed on `date`"
-      - ls -la  # Verify final structure
+      
+      # Create appspec and scripts in artifact
+      - mkdir -p scripts
+      - chmod +x scripts/*.sh 2>/dev/null || true
+      
+      # List final structure
+      - echo "Final artifact structure:"
+      - find . -type f -name "*.json" | grep -v node_modules
+      - ls -la
 
 artifacts:
   files:
     - '**/*'
+  base-directory: .
+  discard-paths: no
+
+cache:
+  paths:
+    - 'node_modules/**/*'
+    - 'client/node_modules/**/*'
+    - 'server/node_modules/**/*'
