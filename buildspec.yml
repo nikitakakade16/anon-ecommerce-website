@@ -4,16 +4,17 @@ phases:
   install:
     commands:
       - echo "No dependencies for static site"
-
+      - sudo yum install -y rsync
+        
   build:
     commands:
       - echo "Preparing static website build"
-      - rm -rf build          # Clean old build folder
+      - rm -rf build
       - mkdir build
-      - shopt -s extglob
-      - cp -r !(build) build/
-        
+      - rsync -av --exclude='build' ./ ./build/
+
 artifacts:
   files:
     - '**/*'
   base-directory: build
+
